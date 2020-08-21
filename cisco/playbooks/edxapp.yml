@@ -1,0 +1,34 @@
+#!/usr/bin/env ansible-playbook
+---
+- include: ../playbooks/cluster.yml
+  vars:
+    CLUSTER_NAME: edxapp
+    CLUSTER_NUMBER: 1
+  when: redeploy | default(False) | bool
+- name: "Setup {{ CLUSTER_NAME }}"
+  hosts:
+    - "{{ CLUSTER_NAME }}{{ CLUSTER_NUMBER }}[-1]"
+  gather_facts: True
+  become: true
+  vars:
+    CLUSTER_NAME: edxapp
+    CLUSTER_NUMBER: 1
+    nginx_sites:
+     - lms
+     - cms
+     - verify
+    nginx_default_sites:
+     - lms
+    NGINX_REDIRECT_TO_HTTPS: true
+  vars_files:
+    - "{{ COMMON_DEPLOYMENT_DIR }}/common.yaml"
+    - "{{ COMMON_DEPLOYMENT_DIR }}/edxapp-common.yaml"
+    - "{{ COMMON_DEPLOYMENT_DIR }}/edxapp.yml"
+    - "{{ COMMON_DEPLOYMENT_DIR }}/embargo.yaml"
+  roles:
+    - role: nginx
+      tags: nginx
+    - role: edxapp
+      tags: edxapp
+- include: ../playbooks/ami.yml
+  when: redeploy | default(False) | bool
